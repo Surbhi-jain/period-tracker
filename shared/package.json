@@ -1,0 +1,10 @@
+{
+  "name": "@luna/shared",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./dates": "./dates.ts",
+    "./validation": "./validation.ts",
+    "./tracker-types": "./tracker-types.ts"
+  }
+}

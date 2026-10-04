@@ -1,28 +1,16 @@
 {
-  "name": "period-tracker",
-  "version": "0.1.0",
+  "name": "luna",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.117.2",
-    "next": "16.3.6",
-    "next-auth": "^5.0.0-beta.32",
-    "react": "19.2.8",
-    "react-dom": "19.2.8"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.3.6",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "dev": "npm run dev --prefix ui",
+    "dev:ui": "npm run dev --prefix ui",
+    "dev:api": "npm run dev --prefix backend",
+    "build": "npm run build --prefix ui",
+    "start": "npm start --prefix ui",
+    "lint": "npm run lint --prefix ui",
+    "typecheck": "npm run typecheck --prefix ui && npm run typecheck --prefix backend",
+    "test": "npm test --prefix ui",
+    "test:run": "npm run test:run --prefix ui && npm run test:run --prefix backend",
+    "check": "npm run check --prefix ui && npm run test:run --prefix backend && npm run typecheck --prefix backend"
   }
 }
