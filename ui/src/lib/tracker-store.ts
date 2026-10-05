@@ -1,6 +1,7 @@
 import type { PeriodEntry } from "./cycle-estimate";
+import { addDays, daysBetween, rangesOverlap } from "./dates";
 import { lunaDebug } from "./debug";
-import { periodOverlaps, validatePeriodInput } from "./validation";
+import { MAX_PERIOD_DAYS, validatePeriodInput } from "./validation";
 
 export const PROFILE_KEY = "luna-profile-v1";
 export const PERIODS_KEY = "luna-periods-v1";
@@ -133,6 +134,79 @@ async function request<T>(
   return body;
 }
 
+
+function uncoveredRanges(
+  startDate: string,
+  endDate: string,
+  periods: PeriodEntry[],
+): PeriodRange[] {
+  const ranges: PeriodRange[] = [];
+  let cursor: string | null = null;
+  for (let day = startDate; day <= endDate; day = addDays(day, 1)) {
+    const taken = periods.some((saved) => saved.startDate <= day && day <= saved.endDate);
+    if (taken) {
+      if (cursor) {
+        ranges.push({ startDate: cursor, endDate: addDays(day, -1) });
+        cursor = null;
+      }
+    } else if (!cursor) {
+      cursor = day;
+    }
+  }
+  if (cursor) ranges.push({ startDate: cursor, endDate });
+  return ranges;
+}
+
+async function absorbDevicePeriod(
+  fetcher: StoreFetcher,
+  entry: PeriodRange,
+  periods: PeriodEntry[],
+): Promise<PeriodEntry[]> {
+  const overlapping = periods.filter((saved) =>
+    rangesOverlap(saved.startDate, saved.endDate, entry.startDate, entry.endDate),
+  );
+
+  if (overlapping.length === 0) {
+    const { period } = await request<{ period: PeriodEntry }>(fetcher, "/periods", {
+      method: "POST",
+      body: JSON.stringify({ startDate: entry.startDate, endDate: entry.endDate }),
+    });
+    return [period, ...periods];
+  }
+
+  const startDate = [entry.startDate, ...overlapping.map((saved) => saved.startDate)].sort()[0];
+  const endDate = [entry.endDate, ...overlapping.map((saved) => saved.endDate)].sort().at(-1);
+  if (!endDate) return periods;
+
+  if (daysBetween(startDate, endDate) <= MAX_PERIOD_DAYS) {
+    let next = periods;
+    const keeper = overlapping[0];
+    if (keeper.startDate !== startDate || keeper.endDate !== endDate) {
+      const { period } = await request<{ period: PeriodEntry }>(
+        fetcher,
+        `/periods/${encodeURIComponent(keeper.id)}`,
+        { method: "PUT", body: JSON.stringify({ startDate, endDate }) },
+      );
+      next = next.map((saved) => (saved.id === keeper.id ? period : saved));
+    }
+    for (const extra of overlapping.slice(1)) {
+      await request(fetcher, `/periods/${encodeURIComponent(extra.id)}`, { method: "DELETE" });
+      next = next.filter((saved) => saved.id !== extra.id);
+    }
+    return next;
+  }
+
+  let next = periods;
+  for (const slice of uncoveredRanges(entry.startDate, entry.endDate, periods)) {
+    const { period } = await request<{ period: PeriodEntry }>(fetcher, "/periods", {
+      method: "POST",
+      body: JSON.stringify(slice),
+    });
+    next = [period, ...next];
+  }
+  return next;
+}
+
 export function createAccountStore(
   fetcher: StoreFetcher,
   deviceStorage: KeyValueStorage,
@@ -146,16 +220,7 @@ export function createAccountStore(
 
       let nextPeriods = periods;
       for (const entry of device.periods) {
-        if (periodOverlaps(entry.startDate, entry.endDate, nextPeriods)) continue;
-        const { period } = await request<{ period: PeriodEntry }>(
-          fetcher,
-          "/periods",
-          {
-            method: "POST",
-            body: JSON.stringify({ startDate: entry.startDate, endDate: entry.endDate }),
-          },
-        );
-        nextPeriods = [period, ...nextPeriods];
+        nextPeriods = await absorbDevicePeriod(fetcher, entry, nextPeriods);
       }
 
       lunaDebug("store", "Moved this device's data into the account");

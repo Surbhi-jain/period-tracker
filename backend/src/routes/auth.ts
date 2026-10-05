@@ -4,9 +4,14 @@ import { frontendUrl } from "../env";
 import { googleAuthUrl, safeNextPath, userFromGoogleCode, userFromGoogleIdToken } from "../google";
 import { json, jsonError, readJsonObject } from "../http";
 import {
+  attachOAuthStateCookie,
   attachSessionCookie,
+  clearOAuthStateCookie,
   clearSessionCookie,
   createSessionToken,
+  newOAuthNonce,
+  oauthNoncesMatch,
+  readOAuthStateCookie,
   requireSignedInUser,
 } from "../session";
 
@@ -15,26 +20,35 @@ export function authRoutes() {
 
   routes.get("/google", (c) => {
     const next = safeNextPath(c.req.query("next"));
-    const state = Buffer.from(JSON.stringify({ next }), "utf8").toString("base64url");
+    const nonce = newOAuthNonce();
+    const state = Buffer.from(JSON.stringify({ next, nonce }), "utf8").toString("base64url");
+    attachOAuthStateCookie(c, nonce);
     return c.redirect(googleAuthUrl(state), 302);
   });
 
   routes.get("/google/callback", async (c) => {
     const code = c.req.query("code");
     const state = c.req.query("state");
+    const cookieNonce = readOAuthStateCookie(c);
+    clearOAuthStateCookie(c);
     let next = "/tracker";
+    let nonce = "";
     if (state) {
       try {
         const parsed = JSON.parse(Buffer.from(state, "base64url").toString("utf8")) as {
           next?: string;
+          nonce?: string;
         };
         next = safeNextPath(parsed.next);
+        nonce = typeof parsed.nonce === "string" ? parsed.nonce : "";
       } catch {
         next = "/tracker";
       }
     }
 
-    if (!code) return c.redirect(`${frontendUrl()}/?error=sign-in`, 302);
+    if (!code || !nonce || !cookieNonce || !oauthNoncesMatch(nonce, cookieNonce)) {
+      return c.redirect(`${frontendUrl()}/?error=sign-in`, 302);
+    }
 
     try {
       const user = await userFromGoogleCode(code);

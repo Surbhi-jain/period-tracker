@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": ".cursor/hooks/run-unit-tests.mjs",
+        "timeout": 60
+      }
+    ],
+    "postToolUse": [
+      {
+        "command": ".cursor/hooks/run-unit-tests.mjs",
+        "matcher": "Write|StrReplace",
+        "timeout": 60
+      }
+    ]
+  }
+}

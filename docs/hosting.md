@@ -5,7 +5,7 @@ Luna is two hosts, plus Supabase. Do not put both apps on one static site.
 | Host | What you deploy | Suggested service |
 | --- | --- | --- |
 | **Website** | `ui/` | Vercel. Project root directory: `ui` |
-| **API** | `backend/` (needs `shared/` next to it) | Railway, Render, or Fly |
+| **API** | `backend/` (needs `shared/` next to it) | Render. Root directory: `backend` |
 | **Data** | Existing Supabase project | Leave it where it is |
 
 A later mobile app uses the API host only.
@@ -29,9 +29,11 @@ After you have both URLs, they must point at each other:
 | `FRONTEND_URL` | Backend | Website origin |
 | `API_URL` | Backend | API origin |
 
-Example: website `https://luna.vercel.app`, API `https://luna-api.up.railway.app`.
+Example: website `https://luna.vercel.app`, API `https://luna-api.onrender.com`.
 
 Do not put `SUPABASE_SERVICE_ROLE_KEY`, `AUTH_SECRET`, or `AUTH_GOOGLE_SECRET` on the UI host.
+
+Step-by-step: [Backend deployment](backend-deployment.md) then [UI deployment](ui-deployment.md).
 
 ## 1. Deploy the backend first
 

@@ -57,4 +57,9 @@ From the repo root:
 
 ## Deploying
 
-Host the two applications on **two hosts**: UI on Vercel (root directory `ui`), backend on Railway, Render, or Fly. They only share Supabase and the four public URL variables. Full steps: [docs/hosting.md](docs/hosting.md). Backend endpoints: [backend/README.md](backend/README.md).
+Host the two applications on **two hosts**. They only share Supabase and the four public URL variables.
+
+- Backend on Render: [docs/backend-deployment.md](docs/backend-deployment.md)
+- UI on Vercel: [docs/ui-deployment.md](docs/ui-deployment.md)
+- Overview: [docs/hosting.md](docs/hosting.md)
+- API endpoints: [backend/README.md](backend/README.md)

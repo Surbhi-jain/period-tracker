@@ -126,6 +126,41 @@ describe("account store", () => {
     expect(storage.has(PERIODS_KEY)).toBe(false);
   });
 
+  it("extends an account period so extra local days are not dropped", async () => {
+    const storage = memoryStorage({
+      [PERIODS_KEY]: JSON.stringify([
+        { id: "local-1", startDate: "2026-02-01", endDate: "2026-02-06" },
+      ]),
+    });
+    const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url === "/periods" && !init?.method) {
+        return jsonResponse({
+          periods: [{ id: "cloud-1", startDate: "2026-02-01", endDate: "2026-02-03" }],
+        });
+      }
+      if (init?.method === "PUT") {
+        const body = JSON.parse(String(init.body));
+        return jsonResponse({ period: { id: "cloud-1", ...body } });
+      }
+      throw new Error(`unexpected ${init?.method ?? "GET"} ${url}`);
+    });
+    const store = createAccountStore(fetcher, storage);
+
+    const data = await store.load();
+
+    expect(data.movedFromDevice).toBe(true);
+    expect(data.periods).toEqual([
+      { id: "cloud-1", startDate: "2026-02-01", endDate: "2026-02-06" },
+    ]);
+    expect(storage.has(PERIODS_KEY)).toBe(false);
+    const puts = fetcher.mock.calls.filter(([, init]) => init?.method === "PUT");
+    expect(puts).toHaveLength(1);
+    expect(JSON.parse(String(puts[0][1]?.body))).toEqual({
+      startDate: "2026-02-01",
+      endDate: "2026-02-06",
+    });
+  });
+
   it("keeps the browser copy if moving it to the account fails", async () => {
     const storage = memoryStorage({
       [PERIODS_KEY]: JSON.stringify([

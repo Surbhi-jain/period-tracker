@@ -50,9 +50,17 @@ const securityHeaders = [
   },
 ];
 
+const repoRoot = resolve(__dirname, "..");
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   transpilePackages: ["@luna/shared"],
+  // Vercel Root Directory is `ui`. Turbopack will not follow `file:../shared`
+  // unless the resolve root is the git repo (parent of `ui` and `shared`).
+  outputFileTracingRoot: repoRoot,
+  turbopack: {
+    root: repoRoot,
+  },
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },

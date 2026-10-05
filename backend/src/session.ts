@@ -1,9 +1,10 @@
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import type { Context } from "hono";
 import { SignJWT, jwtVerify } from "jose";
 import { lunaDebug } from "./debug";
 import { normalizeEmail } from "./email";
-import { authSecret } from "./env";
+import { apiUrl, authSecret } from "./env";
 
 export const SESSION_COOKIE = "luna_session";
 
@@ -83,5 +84,45 @@ export function clearSessionCookie(c: Context) {
     path: "/",
     sameSite: "None",
     secure: true,
+  });
+}
+
+export const OAUTH_STATE_COOKIE = "luna_oauth_state";
+const OAUTH_STATE_MAX_AGE = 60 * 10;
+
+function oauthCookieSecure() {
+  return apiUrl().startsWith("https://");
+}
+
+export function newOAuthNonce() {
+  return randomBytes(32).toString("base64url");
+}
+
+export function oauthNoncesMatch(left: string, right: string) {
+  const a = Buffer.from(left);
+  const b = Buffer.from(right);
+  if (a.length !== b.length || a.length === 0) return false;
+  return timingSafeEqual(a, b);
+}
+
+export function attachOAuthStateCookie(c: Context, nonce: string) {
+  setCookie(c, OAUTH_STATE_COOKIE, nonce, {
+    httpOnly: true,
+    path: "/",
+    sameSite: "Lax",
+    secure: oauthCookieSecure(),
+    maxAge: OAUTH_STATE_MAX_AGE,
+  });
+}
+
+export function readOAuthStateCookie(c: Context) {
+  return getCookie(c, OAUTH_STATE_COOKIE) ?? null;
+}
+
+export function clearOAuthStateCookie(c: Context) {
+  deleteCookie(c, OAUTH_STATE_COOKIE, {
+    path: "/",
+    sameSite: "Lax",
+    secure: oauthCookieSecure(),
   });
 }

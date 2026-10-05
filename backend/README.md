@@ -53,4 +53,4 @@ A mobile app uses Google Sign-In, then `POST /auth/google` with the ID token. It
 
 ## Host separately
 
-Deploy this folder on its own host (Railway, Render, or Fly). Use the whole git repo with the service root set to `backend`, so `shared/` still installs. Do not put the website on the same host. Steps: [docs/hosting.md](../docs/hosting.md).
+Deploy this folder on **Render**. Use the whole git repo with the service root set to `backend`, so `shared/` still installs. Do not put the website on Render. Steps: [docs/backend-deployment.md](../docs/backend-deployment.md).
